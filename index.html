@@ -1,0 +1,166 @@
+﻿
+<!DOCTYPE html>
+<html ng-app="kBlog" >
+
+<head>
+
+<script src= "http://ajax.googleapis.com/ajax/libs/angularjs/1.3.14/angular.min.js"></script>
+<script src="lib/ngStorage.min.js"></script>
+</head>
+<body>
+
+	<div ng-controller="MainController" > 
+		<ul ng-controller="GetPostController" ng-if="gVars.showTitles" >	
+			<li   ng-repeat="x in gVars.posts" ng-click="getPost(x.id)">
+				<p ng-bind="x.id"></p>
+				<p ng-bind="x.title"></p>
+				<p ng-bind="x.lead"></p>
+				<p ng-bind="x.author"></p>
+				<p ng-bind="x.date"></p>
+			</li>
+		</ul>
+		<div ng-if="!gVars.showTitles" >
+				<p> {{gVars.post.id }}</p>
+				<p> {{gVars.post.title }}</p>
+				<p> {{gVars.post.lead }}</p>
+				<p> {{gVars.post.date }}</p>
+				<p> {{gVars.post.entry }}</p>
+		</div> 
+	</div>
+<script>
+
+
+//unit: kBlog load-chk-getposts v4.0 
+var app = angular.module('kBlog', ["ngStorage"]);
+app.fname='pposts.php';
+app.factory('loadPosts', function($http, $localStorage) {
+  var loadPosts = {
+    async: function() {
+      // $http returns a promise, which has a then function, which also returns a promise
+      var promise = $http.get(app.fname).then(function (response) {
+			// The then function here is an opportunity to modify the response  The return value gets picked up by the then in the controller.
+			if ($localStorage.posts==undefined) $localStorage.posts=[];
+			if ($localStorage.posts.length == 1 && $localStorage.posts[0].id=="zero") {
+				$localStorage.posts=[];
+			};
+			if ($localStorage.selected==undefined) $localStorage.selected=[];
+
+			$localStorage.posts=[];
+			$localStorage.posts=$localStorage.posts.concat($localStorage.selected,response.data.slice(0,10));
+			console.log('localstorage selected:  ');
+			console.log($localStorage.selected);
+			console.log('localstorage:  ');
+			
+			
+			return response.data;
+			},function(data) {	 
+				//reset
+				//$localStorage.$reset();
+				//set
+				//$localStorage.posts=[];
+				//$localStorage.posts.push({"id" : "1","title" : "1 both  title ","lead" : "1 both  lead ","author" : "1 both  author ","date" : "1 both  date ","entry" : "1 both  entry "});
+				//$localStorage.posts.push({"id" : "2","title" : "2 both  title ","lead" : "2 both  lead ","author" : "2 both  author ","date" : "2 both  date ","entry" : "2 both  entry "});
+				//$localStorage.posts.push({"id" : "3","title" : "3 both  title ","lead" : "3 both  lead ","author" : "3 both  author ","date" : "3 both  date ","entry" : "3 both  entry "});
+				
+				if ($localStorage.posts==undefined) {
+					$localStorage.posts=[];
+					$localStorage.posts.push({"id" : "zero","title" : "Nincs kapcsolat és ","lead" : "nincs lementett adat sem !","author" : "","date" : "","entry" : "Kérem várjon a következő kapcsolatra!"}); 
+				}; 
+				return $localStorage.posts;
+			}
+		);
+      // Return the promise to the controller	  
+	  //console.log('promi');
+	  //console.log(promise);
+
+      return promise;
+    }
+  };
+  return loadPosts;
+})
+app.controller('MainController', function(loadPosts,$scope,$localStorage) {
+	$scope.gVars = {
+		posts: [],
+		post: 'Nincs!',
+		log:[],
+		err: {
+			was: false,
+			msg: '', 
+			see: function() {
+				if (this.was) {
+					console.log('Error report: ');
+					console.log(this.msg);
+				} else {
+					console.log('No error !');
+				}
+			},
+			set: function(errm) {
+				this.was=true;
+				errm += '\n'; 
+				this.msg += errm;
+			},
+			clear: function() {
+				this.msg = '';
+			}
+		},
+		msgs: {
+			msg10: "Hiba1", 
+			msg20: "Hiba2", 
+		},
+		showTitles: true
+	};
+
+	
+	loadPosts.async()
+	.then(function(data,error,update) {
+			$scope.gVars.posts = data;
+			$scope.gVars.log.push(Date.now() + ' - SUCCESS = ' + JSON.stringify(data));
+		},
+		function(error) {
+			$scope.gVars.log.push(Date.now() + ' - ERROR - calls failed, error is\n\n' + JSON.stringify(error));
+			console.log($scope.gVars.log);
+		},
+		function(update) {
+			$scope.gVars.log.push(Date.now() + ' - UPDATE - ' + update);
+						console.log('Hello Kitty3xx');
+			//console.log($scope.gVars.posts);
+			console.log($scope.gVars.log);
+		}
+	);
+
+})
+app.controller('GetPostController', function($scope,$localStorage) {
+	function isId(id) {
+		for	(var i = 0; i < $scope.gVars.posts.length; i++) {
+			if ($scope.gVars.posts[i].id === id) return i;
+		};
+		return -1;
+	};
+	function isId2(id) {
+		for	(var i = 0; i < $localStorage.selected.length; i++) {
+			if ($localStorage.selected[i].id === id) return i;
+		};
+		return -1;
+	};
+	
+	$scope.getPost = function(id) {	
+		$scope.gVars.showTitles=false;
+		var idd=isId(id);
+		if (idd > -1) {
+			$scope.gVars.post= $scope.gVars.posts[idd];
+			idd=isId2(id);
+			if (idd == -1) {
+				$localStorage.selected.push($scope.gVars.post);
+			}
+		} else {
+				$scope.gVars.post= 'Nincs';
+		};
+	};
+});
+
+
+
+</script>
+</body>
+</html>
+
